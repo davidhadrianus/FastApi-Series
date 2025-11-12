@@ -5,7 +5,7 @@ from fastapi.exceptions import HTTPException
 from src.database.main import get_session
 from src.books.services import BookService
 from src.books.schemas import Book, BookCreateModel, BookUpdateModel
-from src.api.v1.dependencies import AccessTokenBearer
+from src.auth.dependencies import AccessTokenBearer
 
 book_router = APIRouter()
 book_service = BookService()

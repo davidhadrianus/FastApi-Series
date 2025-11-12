@@ -2,13 +2,14 @@ from datetime import timedelta, datetime
 from fastapi import APIRouter, status, Depends
 from fastapi.responses import JSONResponse
 
-from src.api.v1.dependencies import RefreshTokenBearer
+from src.auth.dependencies import RefreshTokenBearer, AccessTokenBearer
 from .schemes import UserCreateSchema, UserLoginSchema, UserSchema
 from .services import UserService
 from src.database.main import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.exceptions import HTTPException
-from .utils import create_access_token, decode_access_token, verify_password
+from .utils import create_access_token, verify_password
+from src.database.redis import add_jti_to_blocklist
 
 auth_router = APIRouter()
 user_service = UserService()
@@ -77,3 +78,15 @@ async def refresh_access_token(token_data: dict = Depends(RefreshTokenBearer()))
         content={"message": "Token refreshed successfully", "access_token": access_token},
         status_code=status.HTTP_200_OK,
     )
+
+
+@auth_router.get("/logout", status_code=status.HTTP_200_OK)
+async def logout(token_data: dict = Depends(AccessTokenBearer())):
+    """
+    Revokes an access token for a user who has a valid refresh token.
+    """
+    if token_data and 'jti' in token_data:
+        jti = token_data['jti']
+        await add_jti_to_blocklist(jti)
+
+        return JSONResponse(content={"message": "Token revoked successfully"}, status_code=status.HTTP_200_OK)
